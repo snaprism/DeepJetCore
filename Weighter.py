@@ -258,7 +258,7 @@ class Weighter(object):
             for i in range(len(self.binweights)):
                 self.binweights[i]=self.binweights[i]/np.average(self.binweights[i])
               
-    def createNotRemoveIndices(self,Tuple):
+    def createNotRemoveIndices(self,Tuple, use_uproot = False):
         
         if len(self.removeProbabilties) <1:
             raise Exception('removeProbabilties bins not initialised. Cannot create indices per jet')
@@ -278,9 +278,10 @@ class Weighter(object):
             norm.append(0)
             yaverage.append(0)
         
-        for jet in iter(Tuple[self.Axixandlabel]):
+        for i in (range(len(Tuple)) if use_uproot else iter(Tuple[self.Axixandlabel])):
+            jet = Tuple.iloc[i] if use_uproot else i
             binX =  self.getBin(jet[self.nameX], self.axisX)
-            binY =  self.getBin(jet[self.nameY], self.axisY)
+   	        binY =  self.getBin(jet[self.nameY], self.axisY)
             
             for index, classs in enumerate(self.classes):
                 if  useonlyoneclass or 1 == jet[classs]:
