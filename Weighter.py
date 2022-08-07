@@ -281,7 +281,7 @@ class Weighter(object):
         for i in (range(len(Tuple)) if use_uproot else iter(Tuple[self.Axixandlabel])):
             jet = Tuple.iloc[i] if use_uproot else i
             binX =  self.getBin(jet[self.nameX], self.axisX)
-   	        binY =  self.getBin(jet[self.nameY], self.axisY)
+            binY =  self.getBin(jet[self.nameY], self.axisY)
             
             for index, classs in enumerate(self.classes):
                 if  useonlyoneclass or 1 == jet[classs]:
