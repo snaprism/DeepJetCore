@@ -1,17 +1,13 @@
-
 FROM nvidia/cuda:11.1.1-cudnn8-devel-ubuntu18.04 
-
-#11.2 not yet with torch support
-
 
 SHELL ["/bin/bash", "-c"]
 
-RUN sed -i "s,# deb http://archive.canonical.com/ubuntu,deb http://archive.canonical.com/ubuntu,g" /etc/apt/sources.list &&  apt-get update --fix-missing 
+RUN sed -i "s,# deb http://archive.canonical.com/ubuntu,deb http://archive.canonical.com/ubuntu,g" /etc/apt/sources.list
+RUN apt-get update 
 
-
-#base
 RUN apt-get install -y python3.6-dev python3-pip
 RUN pip3 install --upgrade pip
+RUN pip3 install --upgrade setuptools
 RUN ldconfig
 
 #basic user tools
@@ -19,59 +15,44 @@ RUN export DEBIAN_FRONTEND=noninteractive && \
     apt-get install -y git wget nano emacs \
     evince eog ffmpeg unzip zsh python3-tk locales \
     htop
-RUN apt-get update --fix-missing
 
-#doesn't work anyway
-#RUN export DEBIAN_FRONTEND=noninteractive && \
-#    apt-get install -y krb5-user && \
-#    sed -i 's/default_realm = ATHENA.MIT.EDU/default_realm = CERN.CH/g' /etc/krb5.conf 
-#RUN apt-get update --fix-missing
-
+#add some kerberos for convenience
+RUN export DEBIAN_FRONTEND=noninteractive && \
+    apt-get install -y krb5-user 
+    
+#use the standard cern config
+COPY krb5.conf /etc/krb5.conf
 
 ############  root part
 RUN apt-get install -y libx11-dev libxpm-dev libxft-dev libxext-dev
 RUN apt-get install -y cmake openssl
 
+# RUN mkdir /temproot && \
+#     cd /temproot && \
+#     git clone --branch v6-20-00-patches http://github.com/root-project/root.git 
+# RUN cd /temproot && \
+#     mkdir build && \
+#     cd build && \
+#     cmake ../root 
+# RUN cd /temproot/build && \
+#     make -j5 && \
+#     make install && \
+#     rm -rf /temproot
+
 RUN mkdir /temproot && \
     cd /temproot && \
-    git clone --branch v6-20-00-patches http://github.com/root-project/root.git 
+    wget https://cern.ch/amadio/root/root_6.22.00_ubuntu18_amd64.deb > /dev/null 2>&1
+    
 RUN cd /temproot && \
-    mkdir build && \
-    cd build && \
-    cmake ../root 
-RUN cd /temproot/build && \
-    make -j5 && \
-    make install && \
+    apt-get install -y ./root_6.22.00_ubuntu18_amd64.deb && \
     rm -rf /temproot
-
-
-#ensure import ROOT
-ENV PYTHONPATH="/usr/local/lib:${PYTHONPATH}"
-RUN ldconfig
+ 
 
 ############  END root part
 
 ### boost
 RUN apt-get install -y libboost-all-dev
 
-
-############  PIP packages
-
-RUN pip3 install --upgrade setuptools
-RUN pip3 install numpy root_numpy scikit-learn scikit-image h5py matplotlib uproot3 Pillow scipy seaborn 
-RUN pip3 install opencv-python easydict tqdm Cython numba
-
-RUN pip3 install gpustat setGPU
-
-## torch/jupyter stuff 
-RUN pip3 install future gensim jupyter prompt-toolkit                                           
-RUN pip3 install torch-scatter -f https://pytorch-geometric.com/whl/torch-1.8.0+cu111.html      &&\
-    pip3 install torch-sparse -f https://pytorch-geometric.com/whl/torch-1.8.0+cu111.html       &&\
-    pip3 install torch-cluster -f https://pytorch-geometric.com/whl/torch-1.8.0+cu111.html      &&\
-    pip3 install torch-spline-conv -f https://pytorch-geometric.com/whl/torch-1.8.0+cu111.html  &&\
-    pip3 install torch-geometric 
-        
-EXPOSE 8888
 
 #for singularity panic
 RUN adduser  --disabled-password --gecos ""  dummyuser
@@ -80,14 +61,13 @@ RUN apt-get install -y vim
 #some tex things
 RUN apt install -y texlive ghostscript dvipng
 
-#cool plotting
-RUN pip3 install plotly dash
+############  PIP packages
 
-#new
-RUN pip3 install awkward
-    
-
-
-
-
-
+RUN pip3 install numpy scikit-learn scikit-image \
+                 h5py matplotlib uproot3 uproot Pillow \
+                 scipy seaborn opencv-python easydict tqdm Cython numba \
+                 gpustat setGPU plotly dash awkward
+                 
+# Add root_numpy warning
+RUN mkdir -p  /usr/local/lib/python3.6/dist-packages/root_numpy && \
+    echo "raise ImportError(\"WARNING: root_numpy was removed from the DeepJetCore container as it has not been maintained for a while and is not comaptible with python > 3.7. Please switch to uproot or similar.\")"  > /usr/local/lib/python3.6/dist-packages/root_numpy/__init__.py

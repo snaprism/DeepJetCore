@@ -394,6 +394,24 @@ class DataCollection(object):
         
     def __writeData_async_andCollect(self, startindex, outputDir):
         
+        td=self.dataclass()
+        
+        if self.nprocs == 1 or (hasattr(td, "no_fork") and td.no_fork):#no need to fork
+            for sample in self.sourceList:
+                
+                sbasename = os.path.basename(sample)
+                newname = sbasename[:sbasename.rfind('.')]+'.djctd'
+                newpath=os.path.abspath(outputDir+newname)
+                
+                logger.info('convertFromSourceFile'+sample)
+                td.writeFromSourceFile(sample, self.weighterobjects, istraining = not self.istestdata, outname=newpath) 
+                self.samples.append(newname)
+                self.writeToFile(outputDir+'/snapshot.djcdc')
+                td.clear()
+            
+            self.writeToFile(outputDir+'/dataCollection.djcdc')
+            return
+            
         
         from multiprocessing import Process, Queue, cpu_count, Lock
         wo_queue = Queue()
